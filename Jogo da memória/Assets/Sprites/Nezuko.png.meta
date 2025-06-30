@@ -134,7 +134,8 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      Nezuko_0: -9062095847439698710
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 

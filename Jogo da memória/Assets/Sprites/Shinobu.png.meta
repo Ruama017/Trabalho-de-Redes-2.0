@@ -134,7 +134,8 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      Shinobu_0: -9179958771895006675
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
