@@ -134,7 +134,8 @@ TextureImporter:
     secondaryTextures: []
     spriteCustomMetadata:
       entries: []
-    nameFileIdTable: {}
+    nameFileIdTable:
+      Tanjiro02_0: -6017741664687271608
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
