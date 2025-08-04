@@ -17,9 +17,19 @@ public class GameController : MonoBehaviour
     private List<CardBehavior> cartasReveladas = new List<CardBehavior>();
     private int jogadorAtual = 1;
     private int[] pontos = { 0, 0 };
+    
+    private TCPNetworkManager networkManager;
+    private bool isMinhaVez = true; // Só pode clicar se for sua vez
+
 
     void Start()
     {
+        networkManager = TCPNetworkManager.Instance;
+        networkManager.OnMessageReceived += ProcessarMensagem;
+
+        networkManager.StartNetwork();
+        isMinhaVez = networkManager.isServer; // O servidor começa
+
         CriarCartas();
         AtualizarTexto();
 
@@ -73,8 +83,24 @@ public class GameController : MonoBehaviour
 
     public void RevelarCarta(CardBehavior carta)
     {
-        if (cartasReveladas.Count < 2 && !cartasReveladas.Contains(carta))
+        if (!isMinhaVez || cartasReveladas.Count >= 2 || cartasReveladas.Contains(carta))
+            return;
+
+        carta.Revelar();
+        cartasReveladas.Add(carta);
+
+        networkManager.SendMessageToOther($"CLICK|{carta.transform.GetSiblingIndex()}");
+
+        if (cartasReveladas.Count == 2)
+            StartCoroutine(VerificarCartas());
+    }
+    void ProcessarMensagem(string msg)
+    {
+        if (msg.StartsWith("CLICK|"))
         {
+            int index = int.Parse(msg.Split('|')[1]);
+            CardBehavior carta = gridContainer.GetChild(index).GetComponent<CardBehavior>();
+
             carta.Revelar();
             cartasReveladas.Add(carta);
 
@@ -82,6 +108,7 @@ public class GameController : MonoBehaviour
                 StartCoroutine(VerificarCartas());
         }
     }
+
 
     IEnumerator VerificarCartas()
     {
@@ -106,6 +133,8 @@ public class GameController : MonoBehaviour
         }
 
         cartasReveladas.Clear();
+        isMinhaVez = !isMinhaVez;
+
     }
 
     void AtualizarTexto()
