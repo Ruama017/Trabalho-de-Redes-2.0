@@ -1,108 +1,146 @@
 using System;
 using System.IO;
-using System.Net.Sockets;
 using System.Net;
+using System.Net.Sockets;
 using System.Threading;
 using UnityEngine;
 
 public class TCPNetworkManager : MonoBehaviour
 {
-    public bool isServer = false;
-    public int port = 7777;
-    public string ipAddress = "127.0.0.1";
+    public static TCPNetworkManager Instance;
+
+    public bool isServer = false; // Ative no Inspector em um PC para ser o host
+    public string ipAddress = "127.0.0.1"; // IP do servidor (altere no cliente)
 
     private TcpListener server;
     private TcpClient client;
     private NetworkStream stream;
     private StreamReader reader;
     private StreamWriter writer;
+    private Thread networkThread;
 
-    private Thread receiveThread;
+    public event Action<string> OnMessageReceived;
 
-    public static TCPNetworkManager Instance;
-
-    public Action<string> OnMessageReceived;
-
-    void Awake()
+    private void Awake()
     {
-        if (Instance == null) Instance = this;
-        else Destroy(gameObject);
-
-        DontDestroyOnLoad(gameObject);
+        // Singleton para acesso global
+        if (Instance == null)
+        {
+            Instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
     }
 
     public void StartNetwork()
     {
         if (isServer)
         {
-            server = new TcpListener(IPAddress.Any, port);
-            server.Start();
-            server.BeginAcceptTcpClient(OnClientConnected, null);
-            Debug.Log("Servidor iniciado");
+            StartServer();
         }
         else
         {
-            client = new TcpClient();
-            client.BeginConnect(ipAddress, port, OnConnectedToServer, null);
-            Debug.Log("Conectando ao servidor...");
+            StartClient();
         }
     }
 
-    void OnClientConnected(IAsyncResult result)
+    private void StartServer()
     {
-        client = server.EndAcceptTcpClient(result);
-        SetupStreams();
-        Debug.Log("Cliente conectado!");
+        networkThread = new Thread(() =>
+        {
+            try
+            {
+                server = new TcpListener(IPAddress.Any, 5000);
+                server.Start();
+                Debug.Log("Servidor aguardando conexão...");
+                client = server.AcceptTcpClient();
+                Debug.Log("Cliente conectado!");
+                SetupStreams();
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("Erro no servidor: " + e.Message);
+            }
+        });
+        networkThread.Start();
     }
 
-    void OnConnectedToServer(IAsyncResult result)
+    private void StartClient()
     {
-        client.EndConnect(result);
-        SetupStreams();
-        Debug.Log("Conectado ao servidor!");
+        networkThread = new Thread(() =>
+        {
+            try
+            {
+                client = new TcpClient();
+                Debug.Log("Conectando ao servidor...");
+                client.Connect(ipAddress, 5000);
+                Debug.Log("Conectado ao servidor!");
+                SetupStreams();
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("Erro no cliente: " + e.Message);
+            }
+        });
+        networkThread.Start();
     }
 
-    void SetupStreams()
+    private void SetupStreams()
     {
         stream = client.GetStream();
         reader = new StreamReader(stream);
         writer = new StreamWriter(stream);
-        writer.AutoFlush = true;
 
-        receiveThread = new Thread(ReceiveLoop);
-        receiveThread.Start();
-    }
-
-    void ReceiveLoop()
-    {
         while (true)
         {
             try
             {
-                string msg = reader.ReadLine();
-                if (!string.IsNullOrEmpty(msg))
+                string message = reader.ReadLine();
+                if (!string.IsNullOrEmpty(message))
                 {
-                    Debug.Log("Recebido: " + msg);
-                    OnMessageReceived?.Invoke(msg);
+                    Debug.Log("Recebido: " + message);
+                    OnMessageReceived?.Invoke(message);
                 }
             }
-            catch { break; }
+            catch
+            {
+                Debug.LogWarning("Conexão encerrada.");
+                break;
+            }
         }
     }
 
     public void SendMessageToOther(string message)
     {
-        if (writer != null)
+        try
         {
-            writer.WriteLine(message);
+            if (writer != null)
+            {
+                writer.WriteLine(message);
+                writer.Flush();
+            }
+        }
+        catch (Exception e)
+        {
+            Debug.LogError("Erro ao enviar mensagem: " + e.Message);
         }
     }
 
-    void OnApplicationQuit()
+    private void OnApplicationQuit()
     {
-        stream?.Close();
-        client?.Close();
-        server?.Stop();
-        receiveThread?.Abort();
+        try
+        {
+            reader?.Close();
+            writer?.Close();
+            stream?.Close();
+            client?.Close();
+            server?.Stop();
+            networkThread?.Abort();
+        }
+        catch { }
     }
 }
+

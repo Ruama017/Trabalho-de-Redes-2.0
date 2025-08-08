@@ -1633,9 +1633,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 60d04b343c6fc5a4b910732eabb9a310, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isServer: 1
+  isServer: 0
   port: 7777
-  ipAddress: 127.0.0.1
+  ipAddress: 10.57.1.81
 --- !u!4 &1518413634
 Transform:
   m_ObjectHideFlags: 0
