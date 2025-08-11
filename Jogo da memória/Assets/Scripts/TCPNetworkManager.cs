@@ -10,7 +10,7 @@ public class TCPNetworkManager : MonoBehaviour
     public static TCPNetworkManager Instance;
 
     public bool isServer = false; // Ative no Inspector em um PC para ser o host
-    public string ipAddress = "127.0.0.1"; // IP do servidor (altere no cliente)
+    public string ipAddress = "192.168.56.1"; // IP do servidor (altere no cliente)
 
     private TcpListener server;
     private TcpClient client;
@@ -55,7 +55,7 @@ public class TCPNetworkManager : MonoBehaviour
             {
                 server = new TcpListener(IPAddress.Any, 5000);
                 server.Start();
-                Debug.Log("Servidor aguardando conexão...");
+                Debug.Log("Servidor aguardando conexï¿½o...");
                 client = server.AcceptTcpClient();
                 Debug.Log("Cliente conectado!");
                 SetupStreams();
@@ -107,7 +107,7 @@ public class TCPNetworkManager : MonoBehaviour
             }
             catch
             {
-                Debug.LogWarning("Conexão encerrada.");
+                Debug.LogWarning("Conexï¿½o encerrada.");
                 break;
             }
         }

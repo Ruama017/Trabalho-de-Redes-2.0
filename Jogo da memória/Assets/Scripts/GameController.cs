@@ -11,16 +11,17 @@ public class GameController : MonoBehaviour
     public Sprite[] imagensCartas;
     public Transform gridContainer;
 
-    public GameObject telaVitoria;          // Painel da tela de vitória
-    public TextMeshProUGUI textoVitoria;    // Texto do painel da vitória
+    public GameObject telaVitoria;
+    public TextMeshProUGUI textoVitoria;
 
     private List<CardBehavior> cartasReveladas = new List<CardBehavior>();
     private int jogadorAtual = 1;
     private int[] pontos = { 0, 0 };
-    
-    private TCPNetworkManager networkManager;
-    private bool isMinhaVez = true; // Só pode clicar se for sua vez
 
+    private TCPNetworkManager networkManager;
+    private bool isMinhaVez = true;
+
+    private int seedCompartilhada;
 
     void Start()
     {
@@ -28,19 +29,25 @@ public class GameController : MonoBehaviour
         networkManager.OnMessageReceived += ProcessarMensagem;
 
         networkManager.StartNetwork();
-        isMinhaVez = networkManager.isServer; // O servidor começa
+        isMinhaVez = networkManager.isServer;
 
-        CriarCartas();
+        if (networkManager.isServer)
+        {
+            // Servidor gera seed aleatória e envia
+            seedCompartilhada = Random.Range(0, int.MaxValue);
+            networkManager.SendMessageToOther($"SEED|{seedCompartilhada}");
+
+            AplicarSeedECriarCartas(seedCompartilhada);
+        }
+
         AtualizarTexto();
 
-        // Começa com a tela de vitória escondida
         if (telaVitoria != null)
             telaVitoria.SetActive(false);
     }
 
     void Update()
     {
-        // Teste manual para abrir a tela de vitória apertando V
         if (Input.GetKeyDown(KeyCode.V))
         {
             if (telaVitoria != null && textoVitoria != null)
@@ -49,6 +56,13 @@ public class GameController : MonoBehaviour
                 textoVitoria.text = "Teste: Jogador 1 Ganhou!";
             }
         }
+    }
+
+    void AplicarSeedECriarCartas(int seed)
+    {
+        seedCompartilhada = seed;
+        Random.InitState(seedCompartilhada);
+        CriarCartas();
     }
 
     void CriarCartas()
@@ -94,6 +108,7 @@ public class GameController : MonoBehaviour
         if (cartasReveladas.Count == 2)
             StartCoroutine(VerificarCartas());
     }
+
     void ProcessarMensagem(string msg)
     {
         if (msg.StartsWith("CLICK|"))
@@ -107,8 +122,12 @@ public class GameController : MonoBehaviour
             if (cartasReveladas.Count == 2)
                 StartCoroutine(VerificarCartas());
         }
+        else if (msg.StartsWith("SEED|"))
+        {
+            int seed = int.Parse(msg.Split('|')[1]);
+            AplicarSeedECriarCartas(seed);
+        }
     }
-
 
     IEnumerator VerificarCartas()
     {
@@ -119,7 +138,7 @@ public class GameController : MonoBehaviour
             pontos[jogadorAtual - 1]++;
             AtualizarTexto();
 
-            if (pontos[0] + pontos[1] == 4) // todas as cartas foram reveladas
+            if (pontos[0] + pontos[1] == 4)
             {
                 FimDeJogo();
             }
@@ -134,7 +153,6 @@ public class GameController : MonoBehaviour
 
         cartasReveladas.Clear();
         isMinhaVez = !isMinhaVez;
-
     }
 
     void AtualizarTexto()
@@ -159,9 +177,9 @@ public class GameController : MonoBehaviour
     }
 
     public void ReiniciarJogo()
-{
-    SceneManager.LoadScene(SceneManager.GetActiveScene().name); // Recarrega a cena atual
-}
+    {
+        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+    }
 }
 
 
