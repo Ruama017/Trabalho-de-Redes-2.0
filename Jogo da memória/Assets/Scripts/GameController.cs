@@ -44,6 +44,39 @@ public class GameController : MonoBehaviour
 
         if (telaVitoria != null)
             telaVitoria.SetActive(false);
+        void Start()
+        {
+            networkManager = TCPNetworkManager.Instance;
+            networkManager.OnMessageReceived += ProcessarMensagem;
+            networkManager.StartNetwork();
+            isMinhaVez = networkManager.isServer;
+
+            // === ADIÇÃO: iniciar chat de voz local ===
+            var voz = new GameObject("VoiceChat");
+            var sender = voz.AddComponent<VoiceSender>();
+            var receiver = voz.AddComponent<VoiceReceiver>();
+
+            if (networkManager.isServer)
+                sender.ipDestino = "IP_DO_CLIENTE_AQUI"; // IP do outro jogador
+            else
+                sender.ipDestino = "IP_DO_SERVIDOR_AQUI";
+
+            receiver.porta = 8050; // mesma porta em ambos
+            // ========================================
+
+            if (networkManager.isServer)
+            {
+                seedCompartilhada = Random.Range(0, int.MaxValue);
+                networkManager.SendMessageToOther($"SEED|{seedCompartilhada}");
+                AplicarSeedECriarCartas(seedCompartilhada);
+            }
+
+            AtualizarTexto();
+
+            if (telaVitoria != null)
+                telaVitoria.SetActive(false);
+        }
+
     }
 
     void Update()
